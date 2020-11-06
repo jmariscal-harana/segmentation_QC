@@ -2,15 +2,16 @@ import os
 import numpy as np
 import pandas as pd
 from collections import Iterable
-from datetime import datetime as dt
+from datetime import datetime as datetime
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from matplotlib import colors as mpcolors
 import IPython
+from matplotlib.widgets import CheckButtons
 
 
 class ClickLabel(object):
-    """Class that displays images and records left/righ mouse click labelling"""
+    """Class that displays images and records left/right mouse click labelling"""
 
     def __init__(self,
                  data_folder='images_temp/',
@@ -56,8 +57,8 @@ class ClickLabel(object):
         for (v, s) in [(rows, 'rows'), (columns, 'columns'), (fontsize, 'fontsize')]:
             assert isinstance(v, int), '\'' + s + '\' must be int'
 
-        self.rows, self.columns, self.fontsize = rows, columns, fontsize
-        self.num = rows * columns  # number of images to display on one grid
+        # self.rows, self.columns, self.fontsize = rows, columns, fontsize
+        # self.num = rows * columns  # number of images to display on one grid
 
         self.result_path = result_path
         self.result = self.result_table()  # read in or create result table
@@ -66,12 +67,17 @@ class ClickLabel(object):
             data_folder)  # get filepaths for all images
         self.images = []  # images attribute is empty until we first call labelling_grid()
 
+        img_num = len(self.image_paths)
+        self.columns, self.fontsize = columns, fontsize
+        self.rows = int(np.ceil(img_num/4) + 1)
+        self.num = self.rows * self.columns  # number of images to display on one grid
+
         self.label_options, self.color_options = label_options, color_options
         # map click events to labels, left mouse event = 1, right mouse event = 3
         self.click_map = dict([(a, b) for a, b in zip([1, 3], label_options)])
-        # map each label to color, with the 'None' label given False
+        # map each label to color, with the 'ACCEPT' label given False
         self.color_map = {
-            **dict([(label_options[x], color_options[x]) for x in [0, 1]]), 'None': False}
+            **dict([(label_options[x], color_options[x]) for x in [0, 1]]), 'ACCEPT': False}
 
     def result_table(self):
         """Attempts to read from a previous result table if one exists, else creates a new result table"""
@@ -80,7 +86,7 @@ class ClickLabel(object):
                 # file must be a CSV with 'filename' column
                 df = pd.read_csv(self.result_path, index_col='filename')
                 # CSV must contain 'label' column
-                df['done'] = df['label'] != 'None'
+                df['done'] = df['label'] != 'ACCEPT'
                 # CSV must contain 'timestamp' column
                 return df.sort_values(['done', 'timestamp']).drop('done', axis=1)
             except:  # if conditions aren't met raise error
@@ -103,16 +109,28 @@ class ClickLabel(object):
     def onclick(self, event):
         """Mouse click event handler, will update an image if the user left or right clicks"""
         if event.button in self.click_map.keys():  # if mouse click occurs
+            if self.check_box.get_status()[0]:
+                self.fig.canvas.mpl_disconnect(self.cid)
+                for i in self.images:  # for each image in the previous grid
+                    # store latest label/timestamp to result
+                    self.result.loc[i.path] = [i.label, i.timestamp]
+                    # save result table as CSV to result_path
+                    self.result.to_csv(self.result_path)    
+                self.images = []  # reset list of images
+                # self.ax.clear() # clear previous display
+                # self.fig.close('all')
+                plt.close(self.fig)
+
             # loop through each image on the grid
             for idx, img in enumerate(self.images):
                 if event.inaxes == img.ax:  # if click occured on this image
                     # map button number to label
                     label = self.click_map[event.button]
                     if label == img.label:
-                        label = 'None'  # if this matches the label for this image we unlabel
+                        label = 'ACCEPT'  # if this matches the label for this image we unlabel
                     color = self.color_map[label]  #  map label to color
                     img.update(label=label, timestamp=str(
-                        dt.now())[:-7])  #  update image
+                        datetime.now())[:-7])  #  update image
 
     def labelling_grid(self):
         """
@@ -131,22 +149,38 @@ class ClickLabel(object):
             self.image_paths = np.concatenate(
                 [self.image_paths[self.num:], self.image_paths[:self.num]])
 
-        # create figure for grid, where height of grid varies dynamically with number of rows
-        fig = plt.figure(figsize=(9, 2 + (1.5 * self.rows)),
-                         num='LEFT CLICK: {} / RIGHT CLICK: {}'.format(*self.label_options))
-
         self.images = []  # reset list of image
+        self.ax = []
+        self.fig = []
+        
+        # create figure for grid, where height of grid varies dynamically with number of rows
+        self.fig = plt.figure(figsize=(9, 2 + (1.5 * self.rows)),
+                         num='Default: ACCEPT / Left click: {} / Right click: {}'.format(*self.label_options))
+
         # loop through enough images to fill grid
         for idx, f in enumerate(self.image_paths[:self.num]):
-            ax = fig.add_subplot(self.rows, self.columns,
+            ax = self.fig.add_subplot(self.rows, self.columns,
                                  idx + 1)  # add subplot to grid
             self.images.append(self.SingleImage(
                 path=f, ax=ax, props=self))  # add image
 
-        cid = fig.canvas.mpl_connect(
+        # Add additional images at the end for notes, papillary muscle labels present,
+        # and box tick to quit
+        ax = self.fig.add_subplot(
+            self.rows, self.columns, self.num)  # add subplot to grid
+
+        self.images_quit = np.array([[[255, 255, 255]]])
+        # self.label = 'quit'
+        # self.images.append(self.image)  # add image
+        ax.imshow(self.images_quit)
+        ax.set_xticks([]), ax.set_yticks([])  # remove axis ticks
+        self.check_box = CheckButtons(ax, ['SAVE STUDY',], [False,])
+        
+        self.cid = self.fig.canvas.mpl_connect(
             'button_press_event', self.onclick)  # connect event handler
-        plt.tight_layout(pad=2)  #  ensure spacing between images in grid
-        plt.show()  # show grid
+
+        self.fig.tight_layout(pad=2)  #  ensure spacing between images in grid
+        self.fig.show()  # show grid
 
     class SingleImage(object):
         """Class that stores information relating to a single image within ClickLabel"""
@@ -172,19 +206,19 @@ class ClickLabel(object):
             else:
                 self.update()  #  otherwise update with default parameters
 
-        def update(self, label='None', timestamp='None'):
+        def update(self, label='ACCEPT', timestamp='None'):
             """Update attributes and image display
 
             Parameters
             ----------
             label: str
-                Label assigned to this image, where 'None' indicates no label
+                Label assigned to this image, where 'ACCEPT' indicates no label
             timestamp: str
                 String type timestamp of format YYYY-MM-DD hh:mm:ss, or 'None' to use current time
 
             """
             if timestamp == 'None':
-                timestamp = str(dt.now())[:-7]
+                timestamp = str(datetime.now())[:-7]
             self.label, self.timestamp = label, timestamp  # update attributes
 
             self.ax.clear()  # clear previous display
@@ -203,12 +237,12 @@ class ClickLabel(object):
                 '/')[-1], fontsize=self.fontsize)  # title = filename
 
             overlay = self.color_map[label]  # overlay to image
-            if label != 'None':  # if we have a label add overlay color
+            if label != 'ACCEPT':  # if we have a label add overlay color
                 width, height = self.image.shape[:2]
                 self.ax.imshow(np.resize(mpcolors.to_rgb(
                     overlay), (width, height, 3)), alpha=0.4)
 
-            caption_color = 'k' if label == 'None' else overlay  # caption is black if no label
-            caption = 'Label: ' + str(label)  # to display below x-axis
+            caption_color = 'k' if label == 'ACCEPT' else overlay  # caption is black if no label
+            caption = str(label)  # to display below x-axis
             self.ax.set_xlabel(caption, fontsize=self.fontsize,
                                color=caption_color)  #  add caption
