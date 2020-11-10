@@ -138,11 +138,10 @@ cl = ClickLabel(result_path='output/df_temp.csv', # file to save the results to
                 fontsize=10) # size of display text
 
 cl.labelling_grid(  data_folder=destination_folder,  # folder containing the images to label
-                    rows=5, # rows in each labelling grid
                     columns=4) # columns in each labelling grid
+
+# print('again')
 
 cl.labelling_grid(  data_folder=destination_folder,  # folder containing the images to label
-                    rows=5, # rows in each labelling grid
                     columns=4) # columns in each labelling grid
 
-print('end')

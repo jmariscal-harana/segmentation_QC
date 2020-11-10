@@ -35,8 +35,6 @@ class ClickLabel:
                 Two str that are names each labels, for left and right click respectively
             color_options: list-like of str 
                 Two str that are color names that can pass to matplotlib.colors.to_rgb()
-            rows: int
-                number of rows to display on each labelling grid
             columns: int
                 number of columns to display on each labelling grid
             fontsize: int
@@ -54,7 +52,6 @@ class ClickLabel:
             assert isinstance(v, int), '\'' + s + '\' must be int'
 
         self.result_path = result_path
-        self.result = self.result_table()  # read in or create result table
 
         self.images = []  # images attribute is empty until we first call labelling_grid()
 
@@ -69,30 +66,32 @@ class ClickLabel:
 
     def result_table(self):
         """Attempts to read from a previous result table if one exists, else creates a new result table"""
-        if os.path.exists(self.result_path):  # if the file exists attempt to read it
-            try:  # attempt to read
-                # file must be a CSV with 'filename' column
-                df = pd.read_csv(self.result_path, index_col='filename')
-                # CSV must contain 'label' column
-                df['done'] = df['label'] != 'ACCEPT'
-                # CSV must contain 'timestamp' column
-                return df.sort_values(['done', 'timestamp']).drop('done', axis=1)
-            except:  # if conditions aren't met raise error
-                raise ValueError("""The file that 'result_path' points to must be a CSV containing
-                                     columns named 'filename', 'label' and 'timestamp""")
-        else:  # if file does not exist create empty result table
-            return pd.DataFrame(columns=['filename', 'label', 'timestamp']).set_index('filename')
+        # if os.path.exists(self.result_path):  # if the file exists attempt to read it
+        #     try:  # attempt to read
+        #         # file must be a CSV with 'filename' column
+        #         df = pd.read_csv(self.result_path, index_col='filename')
+        #         # CSV must contain 'label' column
+        #         df['done'] = df['label'] != 'ACCEPT'
+        #         # CSV must contain 'timestamp' column
+        #         return df.sort_values(['done', 'timestamp']).drop('done', axis=1)
+        #     except:  # if conditions aren't met raise error
+        #         raise ValueError("""The file that 'result_path' points to must be a CSV containing
+        #                              columns named 'filename', 'label' and 'timestamp""")
+        # else:  # if file does not exist create empty result table
+        #     return pd.DataFrame(columns=['filename', 'label', 'timestamp']).set_index('filename')
+        return pd.DataFrame(columns=['filename', 'label', 'timestamp']).set_index('filename')
 
     def get_image_paths(self, path):
         """Gets list of filepaths for all images in the data_folder, with unlabelled images first in the list"""
         if path[-1] != os.path.sep:
             path += os.path.sep  # make sure data_folder input has trailing slash
-        labelled = list(self.result.index)  # previously labelled
+        # labelled = list(self.result.index)  # previously labelled
         # never labelled
-        unlabelled = [
-            path + f for f in os.listdir(path) if path + f not in labelled]
+        unlabelled = [path + f for f in os.listdir(path)]
+            # path + f for f in os.listdir(path) if path + f not in labelled]
         # order such that never labelled are first
-        return np.concatenate([np.sort(unlabelled), labelled])
+        return np.sort(unlabelled)
+        # return np.concatenate([np.sort(unlabelled), labelled])
 
     # def text_box_get(self):
     #     def printtext(self):
@@ -119,15 +118,12 @@ class ClickLabel:
         """Mouse click event handler, will update an image if the user left or right clicks"""
         if event.button in self.click_map.keys():  # if mouse click occurs
             if self.check_box.get_status()[0]:
-                self.fig.canvas.mpl_disconnect(self.cid)
                 for i in self.images:  # for each image in the previous grid
                     # store latest label/timestamp to result
                     self.result.loc[i.path] = [i.label, i.timestamp]
                     # save result table as CSV to result_path
                     self.result.to_csv(self.result_path)
-                    # self.fig.close('all')
-                    plt.close(self.fig)
-                    # plt.close('all')
+                plt.close('all')
             # elif self.text_box.get_status()[0]:
             #     self.text_box_get()
             #     np.savetxt('test.out', self.notes_string)
@@ -143,7 +139,7 @@ class ClickLabel:
                     img.update(label=label, timestamp=str(
                         datetime.now())[:-7])  #  update image
 
-    def labelling_grid(self, data_folder, rows=2, columns=4):
+    def labelling_grid(self, data_folder, columns=4):
         """
         Generates a labelling grid, adds images and the event handler. 
         If a grid was previously generated using this instance, then before
@@ -153,20 +149,22 @@ class ClickLabel:
         # Check validity of arguments
         for (v, s) in [(data_folder, 'data_folder'), (self.result_path, 'result_path')]:
             assert isinstance(v, str), '\'' + s + '\' must be str'
-        for (v, s) in [(rows, 'rows'), (columns, 'columns')]:
+        for (v, s) in [(columns, 'columns')]:
             assert isinstance(v, int), '\'' + s + '\' must be int'
         
         self.image_paths = self.get_image_paths(data_folder)  # get filepaths for all images
+        print(self.image_paths)
         self.columns = columns
         img_num = len(self.image_paths)
         self.rows = int(np.ceil(img_num/4) + 1)
         self.num = self.rows * self.columns  # number of images to display on one grid
 
+        self.result = self.result_table()  # read in or create result table
         self.images = []  # reset list of image
         self.ax = []
-        self.fig = []
 
         ax = []
+        ax.clear()
         # ax_text = []
         # ax_quit = []
 
@@ -181,26 +179,27 @@ class ClickLabel:
         #         [self.image_paths[self.num:], self.image_paths[:self.num]])
         
         # create figure for grid, where height of grid varies dynamically with number of rows
-        self.fig = plt.figure(figsize=(9, 2 + (1.5 * self.rows)),
+        fig = plt.figure(figsize=(9, 2 + (1.5 * self.rows)),
                          num='Default: ACCEPT / Left click: {} / Right click: {}'.format(*self.label_options))
 
         # loop through enough images to fill grid
         for idx, f in enumerate(self.image_paths):
-            ax = self.fig.add_subplot(self.rows, self.columns,
+            # print(idx)
+            ax = fig.add_subplot(self.rows, self.columns,
                                  idx + 1)  # add subplot to grid
             self.images.append(self.SingleImage(
                 path=f, ax=ax, props=self))  # add image
 
         # Add additional images at the end for notes, papillary muscle labels present,
         # and box tick to quit
-        ax = self.fig.add_subplot(
+        ax = fig.add_subplot(
             self.rows, self.columns, self.num)  # add subplot to grid
         images_quit = np.array([[[255, 255, 255]]])
         ax.imshow(images_quit)
         ax.set_xticks([]), ax.set_yticks([])  # remove axis ticks
         self.check_box = CheckButtons(ax, ['SAVE STUDY',], [False,])
         
-        # ax_text = self.fig.add_subplot(
+        # ax_text = fig.add_subplot(
         #     self.rows, self.columns, self.num-1)  # add subplot to grid
         # images_text = np.array([[[255, 255, 255]]])
         # ax_text.imshow(images_text)
@@ -208,10 +207,13 @@ class ClickLabel:
         # self.text_box = CheckButtons(ax_text, ['ADD NOTES',], [False,])
 
         # Connect event handler
-        self.cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
-        self.fig.tight_layout(pad=2)  #  ensure spacing between images in grid
-        self.fig.show()  # show grid
+        self.cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
+        fig.tight_layout(pad=2)  #  ensure spacing between images in grid
+        fig.show()  # show grid
 
+        # plt.close(fig)
+        # fig.close('all')
+        # plt.close('all')
 
     class SingleImage:
         """Class that stores information relating to a single image within ClickLabel"""
@@ -232,10 +234,11 @@ class ClickLabel:
             self.color_map, self.fontsize = props.color_map, props.fontsize  # get properties
 
             # if a result already exists for this image, update with existing parameters
-            if path in props.result.index:
-                self.update(*props.result.loc[path])
-            else:
-                self.update()  #  otherwise update with default parameters
+            # if path in props.result.index:
+            #     self.update(*props.result.loc[path])
+            # else:
+            #     self.update()  #  otherwise update with default parameters
+            self.update()  #  otherwise update with default parameters
 
         def update(self, label='ACCEPT', timestamp='None'):
             """Update attributes and image display
