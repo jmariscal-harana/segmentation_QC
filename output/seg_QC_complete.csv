@@ -1,0 +1,25 @@
+Study ID,Series name,File name,label,timestamp,clinician_ID
+A_S000003,Medium_axis,pic020.jpg,ACCEPT,20201111_193820,Jorge_Mariscal
+A_S000003,Medium_axis,pic021.jpg,REVISE,20201111_193822,Jorge_Mariscal
+A_S000003,Medium_axis,pic022.jpg,ACCEPT,20201111_193820,Jorge_Mariscal
+A_S000003,Medium_axis,pic023.jpg,ACCEPT,20201111_193820,Jorge_Mariscal
+A_S000001,Short_axis,pic001.jpg,ACCEPT,20201111_193851,Jorge_Mariscal
+A_S000001,Short_axis,pic002.jpg,ACCEPT,20201111_193851,Jorge_Mariscal
+A_S000001,Short_axis,pic003.jpg,ACCEPT,20201111_193851,Jorge_Mariscal
+A_S000001,Short_axis,pic004.jpg,ACCEPT,20201111_193851,Jorge_Mariscal
+A_S000001,Short_axis,pic005.jpg,REVISE,20201111_193856,Jorge_Mariscal
+A_S000001,Short_axis,pic006.jpg,REJECT,20201111_193856,Jorge_Mariscal
+A_S000001,Short_axis,pic007.jpg,ACCEPT,20201111_193851,Jorge_Mariscal
+A_S000001,Short_axis,pic008.jpg,ACCEPT,20201111_193851,Jorge_Mariscal
+A_S000001,Short_axis,pic009.jpg,ACCEPT,20201111_193851,Jorge_Mariscal
+A_S000001,Short_axis,pic010.jpg,ACCEPT,20201111_193851,Jorge_Mariscal
+A_S000001,Long_axis,pic001.jpg,ACCEPT,20201111_193901,Jorge_Mariscal
+A_S000001,Long_axis,pic002.jpg,ACCEPT,20201111_193901,Jorge_Mariscal
+A_S000001,Long_axis,pic003.jpg,ACCEPT,20201111_193901,Jorge_Mariscal
+A_S000001,Long_axis,pic004.jpg,ACCEPT,20201111_193901,Jorge_Mariscal
+A_S000001,Long_axis,pic005.jpg,ACCEPT,20201111_193901,Jorge_Mariscal
+A_S000001,Long_axis,pic006.jpg,REVISE,20201111_193902,Jorge_Mariscal
+A_S000001,Long_axis,pic007.jpg,REVISE,20201111_193903,Jorge_Mariscal
+A_S000001,Long_axis,pic008.jpg,ACCEPT,20201111_193901,Jorge_Mariscal
+A_S000001,Long_axis,pic009.jpg,ACCEPT,20201111_193901,Jorge_Mariscal
+A_S000001,Long_axis,pic010.jpg,REJECT,20201111_193903,Jorge_Mariscal
