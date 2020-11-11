@@ -9,7 +9,7 @@ from matplotlib import colors as mpcolors
 import IPython
 from matplotlib.widgets import CheckButtons
 from tkinter import Tk, Entry, Button
-
+from utils import add_csv_to_csv
 
 class ClickLabel:
     """Class that displays images and records left/right mouse click labelling"""
@@ -18,8 +18,10 @@ class ClickLabel:
                  result_path='output/df.csv',
                  label_options=['Cat meme', 'Dog meme'],
                  color_options=['red', 'blue'],
-                 fontsize=10
-                 ):
+                 fontsize=10,
+                 clinician_ID='John_Doe',
+                 session_csv='session.csv',
+                 global_csv='global.csv'):
         """Constructs attributes and reads in any existing result table
 
             Parameters
@@ -50,12 +52,15 @@ class ClickLabel:
                                             str), '\'' + s + '\' elements must be str'
         for (v, s) in [(fontsize, 'fontsize')]:
             assert isinstance(v, int), '\'' + s + '\' must be int'
+        for (v, s) in [(clinician_ID, 'fonclinician_IDtsize')]:
+            assert type(v[0]) == str, '\'' + s + '\' must be str'
 
         self.result_path = result_path
-
         self.images = []  # images attribute is empty until we first call labelling_grid()
-
         self.fontsize = fontsize
+        self.clinician_ID = clinician_ID
+        self.session_csv = session_csv
+        self.global_csv = global_csv
 
         self.label_options, self.color_options = label_options, color_options
         # map click events to labels, left mouse event = 1, right mouse event = 3
@@ -79,7 +84,7 @@ class ClickLabel:
         #                              columns named 'filename', 'label' and 'timestamp""")
         # else:  # if file does not exist create empty result table
         #     return pd.DataFrame(columns=['filename', 'label', 'timestamp']).set_index('filename')
-        return pd.DataFrame(columns=['filename', 'label', 'timestamp']).set_index('filename')
+        return pd.DataFrame(columns=['Study ID', 'Series name', 'File name', 'label', 'timestamp', 'clinician_ID'])
 
     def get_image_paths(self, path):
         """Gets list of filepaths for all images in the data_folder, with unlabelled images first in the list"""
@@ -118,12 +123,18 @@ class ClickLabel:
         """Mouse click event handler, will update an image if the user left or right clicks"""
         if event.button in self.click_map.keys():  # if mouse click occurs
             if self.check_box.get_status()[0]:
-                for i in self.images:  # for each image in the previous grid
+                for idx, i in enumerate(self.images):  # for each image in the previous grid
                     # store latest label/timestamp to result
-                    self.result.loc[i.path] = [i.label, i.timestamp]
-                    # save result table as CSV to result_path
-                    self.result.to_csv(self.result_path)
+                    path_split = os.path.normpath(i.path).split(os.path.sep)
+                    self.result.loc[idx] = [path_split[-3], path_split[-2], path_split[-1], i.label, i.timestamp, self.clinician_ID]
+                
+                # save result table as CSV to result_path    
+                self.result.to_csv(self.result_path, index=False)
                 plt.close('all')
+
+                add_csv_to_csv(self.result_path, self.session_csv)
+                add_csv_to_csv(self.result_path, self.global_csv)
+                os.remove(self.result_path)
             # elif self.text_box.get_status()[0]:
             #     self.text_box_get()
             #     np.savetxt('test.out', self.notes_string)
@@ -136,8 +147,7 @@ class ClickLabel:
                     if label == img.label:
                         label = 'ACCEPT'  # if this matches the label for this image we unlabel
                     color = self.color_map[label]  #  map label to color
-                    img.update(label=label, timestamp=str(
-                        datetime.now())[:-7])  #  update image
+                    img.update(label=label, timestamp=str(datetime.now().strftime('%Y%m%d_%H%M%S')))  #  update image
 
     def labelling_grid(self, data_folder, columns=4):
         """
@@ -153,7 +163,6 @@ class ClickLabel:
             assert isinstance(v, int), '\'' + s + '\' must be int'
         
         self.image_paths = self.get_image_paths(data_folder)  # get filepaths for all images
-        print(self.image_paths)
         self.columns = columns
         img_num = len(self.image_paths)
         self.rows = int(np.ceil(img_num/4) + 1)
@@ -184,7 +193,6 @@ class ClickLabel:
 
         # loop through enough images to fill grid
         for idx, f in enumerate(self.image_paths):
-            # print(idx)
             ax = fig.add_subplot(self.rows, self.columns,
                                  idx + 1)  # add subplot to grid
             self.images.append(self.SingleImage(
@@ -252,7 +260,7 @@ class ClickLabel:
 
             """
             if timestamp == 'None':
-                timestamp = str(datetime.now())[:-7]
+                timestamp = str(datetime.now().strftime('%Y%m%d_%H%M%S'))
             self.label, self.timestamp = label, timestamp  # update attributes
 
             self.ax.clear()  # clear previous display
