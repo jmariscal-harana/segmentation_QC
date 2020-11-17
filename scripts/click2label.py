@@ -9,7 +9,7 @@ from matplotlib import colors as mpcolors
 import IPython
 from matplotlib.widgets import CheckButtons
 from tkinter import Tk, Entry, Button
-from utils import add_csv_to_csv
+from scripts.utils import add_csv_to_csv
 
 class ClickLabel:
     """Class that displays images and records left/right mouse click labelling"""
